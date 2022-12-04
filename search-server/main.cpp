@@ -175,10 +175,10 @@ private:
             if (documents_.count(plus_word) != 0) {
                 // IDF (inverse document frequency)
                 double idf = log((double)document_count_ / documents_.at(plus_word).size());
-				for (auto [id, tf] : documents_.at(plus_word)) {
-					// релевантность = сумма(TF * IDF) слов документа, которые есть в поиcковом запросе
+                for (auto [id, tf] : documents_.at(plus_word)) {
+                    // релевантность = сумма(TF * IDF) слов документа, которые есть в поиcковом запросе
                     relevance[id] += tf*idf;
-			    }
+                }
             }
         }
         
