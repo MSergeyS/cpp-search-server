@@ -12,7 +12,7 @@ using namespace std;
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
 string ReadLine() {
-	// получения входной строки () от пользователя
+    // получения входной строки () от пользователя
     string s;
     getline(cin, s);
     return s;
@@ -26,25 +26,25 @@ int ReadLineWithNumber() {
 }
 
 vector<string> SplitIntoWords(const string& text) {
-	// разираем строку на слова (вектор слов)
+    // разираем строку на слова (вектор слов)
     vector<string> words;
     string word;
     for (const char c : text) {
-		// перебираем строку по символам
+        // перебираем строку по символам
         if (c == ' ') {
-			// если символ "пробел" - конец слова
+            // если символ "пробел" - конец слова
             if (!word.empty()) {
-				// добавляем слово в вектор
+                // добавляем слово в вектор
                 words.push_back(word);
                 word.clear();
             }
         } else {
-			// добавляем символ в слово
+            // добавляем символ в слово
             word += c;
         }
     }
     if (!word.empty()) {
-		// добавляем в вектор последнее слово в строке
+        // добавляем в вектор последнее слово в строке
         words.push_back(word);
     }
 
@@ -52,54 +52,54 @@ vector<string> SplitIntoWords(const string& text) {
 }
 
 struct Document {
-	// результат поиска
-    int id;				// id документа
+    // результат поиска
+    int id;                // id документа
     double relevance;   // релевантность документа
 };
 
 class SearchServer {
 public:
     void SetStopWords(const string& text) {
-		// 
+        // 
         for (const string& word : SplitIntoWords(text)) {
             stop_words_.insert(word);
         }
     }
 
     void AddDocument(int document_id, const string& document) {
-		// добавляем документ в поисковой сервер
-		
-		// разбираем документ на слова и исключаем стоп-слова
+        // добавляем документ в поисковой сервер
+        
+        // разбираем документ на слова и исключаем стоп-слова
         const vector<string> words = SplitIntoWordsNoStop(document);
-		
-		// для каждого слова документа
-		for (const string& word : words) {
-			// считаем TF(term frequency) слова
+        
+        // для каждого слова документа
+        for (const string& word : words) {
+            // считаем TF(term frequency) слова
             double word_tf = double(count(words.begin(), words.end(), word)) / 
-			                 double(words.size());
-			// добавляем пару {id, tf} слова в контейнер слов поискового сервера				 
-			documents_[word].insert({document_id, word_tf});	
-		}
-		// увеличиваем количество документов в поисковом сервере на 1
+                             double(words.size());
+            // добавляем пару {id, tf} слова в контейнер слов поискового сервера                 
+            documents_[word].insert({document_id, word_tf});    
+        }
+        // увеличиваем количество документов в поисковом сервере на 1
         document_count_ += 1;
     }
 
     vector<Document> FindTopDocuments(const string& raw_query) const {
-		// поиск документов с наибольшей релевантностью
-		
-		// разбираем поисковый запрос
+        // поиск документов с наибольшей релевантностью
+        
+        // разбираем поисковый запрос
         const Query query = ParseQuery(raw_query);
         
-		// ищем во всех документах
+        // ищем во всех документах
         auto matched_documents = FindAllDocuments(query);
 
-		// сортируем по убыванию релевантности
+        // сортируем по убыванию релевантности
         sort(matched_documents.begin(), matched_documents.end(),
              [](const Document& lhs, const Document& rhs) {
                  return lhs.relevance > rhs.relevance;
              });
-			 
-		// оставляем только MAX_RESULT_DOCUMENT_COUNT документов с наибольшей релевантностью
+             
+        // оставляем только MAX_RESULT_DOCUMENT_COUNT документов с наибольшей релевантностью
         if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
             matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
         }
@@ -107,33 +107,33 @@ public:
     }
 
 private:
-	
-	// поисковый запрос
-	struct Query {
+    
+    // поисковый запрос
+    struct Query {
         set<string> plus_words;   // плюс слова (документы включаем в результат поиска)
         set<string> minus_words;  // минус слова (документы исключаем из результата поиска)
     };
-	
-	// база слов документов в поисковом сервера 
-	// ( словарь:
-	//   слово (ключ) -> словарь[ id документа (ключ) -> TF слова в документе]
+    
+    // база слов документов в поисковом сервера 
+    // ( словарь:
+    //   слово (ключ) -> словарь[ id документа (ключ) -> TF слова в документе]
     map<string, map<int, double>> documents_;
 
-	// набор стоп-слов - по этим словам не ищем
+    // набор стоп-слов - по этим словам не ищем
     // (исключаются из документов поискового сервера и из поискового запроса)
     set<string> stop_words_;
     
-	// счётчик документов в поисковом сервере
+    // счётчик документов в поисковом сервере
     int document_count_ = 0;
 
-	
+    
     bool IsStopWord(const string& word) const {
-		// компаратор стоп-слов ( (слово == стоп-слово) -> true )
+        // компаратор стоп-слов ( (слово == стоп-слово) -> true )
         return stop_words_.count(word) > 0;
     }
 
     vector<string> SplitIntoWordsNoStop(const string& text) const {
-		// разбираем строку на слова и исключаем стоп-слова
+        // разбираем строку на слова и исключаем стоп-слова
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
             if (!IsStopWord(word)) {
@@ -144,11 +144,11 @@ private:
     }
     
     Query ParseQuery(const string& text) const {
-		// разбираем поисковый запрос 
+        // разбираем поисковый запрос 
         Query query;
         for (const string& word : SplitIntoWordsNoStop(text)) {
             if (word[0] == '-') {
-				// отрезаем "-" и добавляем в множество минус слов
+                // отрезаем "-" и добавляем в множество минус слов
                 query.minus_words.insert(word.substr(1));
             }
             else {
@@ -159,57 +159,57 @@ private:
     }
 
     vector<Document> FindAllDocuments(const Query query) const {
-		// поиск по всем документам поискового сервера
-		
-		vector<Document> matched_documents;
-		
-		// если поисковый запрос пустой - ничего не ищем (выходим)
-		if (query.plus_words.empty()) {
-			return matched_documents;
-		}
-		
-		map<int, double> relevance;
-		
-		// для всех плюс-слов поискового запроса 
-		for (const string& plus_word : query.plus_words) {
-			// для документов, в которых есть плюс слова поискового запроса считаем релевантность
+        // поиск по всем документам поискового сервера
+        
+        vector<Document> matched_documents;
+        
+        // если поисковый запрос пустой - ничего не ищем (выходим)
+        if (query.plus_words.empty()) {
+            return matched_documents;
+        }
+        
+        map<int, double> relevance;
+        
+        // для всех плюс-слов поискового запроса 
+        for (const string& plus_word : query.plus_words) {
+            // для документов, в которых есть плюс слова поискового запроса считаем релевантность
             if (documents_.count(plus_word) != 0) {
-				for (auto [id, tf] : documents_.at(plus_word)) {
-					// релевантность = сумма(TF * IDF) слов документа, которые есть в посиковом запросе
-					// IDF (inverse document frequency)
+                for (auto [id, tf] : documents_.at(plus_word)) {
+                    // релевантность = сумма(TF * IDF) слов документа, которые есть в посиковом запросе
+                    // IDF (inverse document frequency)
                     relevance[id] += tf * log(double(document_count_) / 
-					                 double(documents_.at(plus_word).size()));
-			    }
-			}
-		}
-		
-		// исключаем документы, в которых есть минус слова
+                                     double(documents_.at(plus_word).size()));
+                }
+            }
+        }
+        
+        // исключаем документы, в которых есть минус слова
         for (const string& minus_word : query.minus_words) {
             if (documents_.count(minus_word) != 0) {
-				for (auto [id, tf] : documents_.at(minus_word)) {
-				    relevance.erase(id);
-				}
-			}
-		}
-		
-		// заполняем структуру результатов поиска
+                for (auto [id, tf] : documents_.at(minus_word)) {
+                    relevance.erase(id);
+                }
+            }
+        }
+        
+        // заполняем структуру результатов поиска
         for (auto [id, rel] : relevance) {
             matched_documents.push_back({id, rel});
         }
-		
+        
         return matched_documents;
     }
 
 };
 
 SearchServer CreateSearchServer() {
-	// создаем поисковый сервер
+    // создаем поисковый сервер
     SearchServer search_server;
     search_server.SetStopWords(ReadLine());   // задаем стоп-слова
 
-	// задаем количество документов в поисковом сервере
+    // задаем количество документов в поисковом сервере
     const int document_count = ReadLineWithNumber();
-	// заносим документы в поисковый сервер
+    // заносим документы в поисковый сервер
     for (int document_id = 0; document_id < document_count; ++document_id) {
         search_server.AddDocument(document_id, ReadLine());
     }
@@ -218,13 +218,13 @@ SearchServer CreateSearchServer() {
 }
 
 int main() {
-	// создаем поисковый сервер
+    // создаем поисковый сервер
     const SearchServer search_server = CreateSearchServer();
     
-	// задаем поисковый запроос
+    // задаем поисковый запроос
     const string query = ReadLine();
     
-	// ищем и выводим результаты поиска
+    // ищем и выводим результаты поиска
     for (const auto& [document_id, relevance] : search_server.FindTopDocuments(query)) {
         cout << "{ document_id = "s << document_id << ", "
              << "relevance = "s << relevance << " }"s << endl;
