@@ -74,9 +74,8 @@ public:
         
         // для каждого слова документа
         for (const string& word : words) {
-            // считаем TF(term frequency) слова
-            double word_tf = double(count(words.begin(), words.end(), word)) / 
-                             double(words.size());
+            // считаем TF (term frequency) слова
+            double word_tf = (double)count(words.begin(), words.end(), word) / words.size();
             // добавляем пару {id, tf} слова в контейнер слов поискового сервера                 
             documents_[word].insert({document_id, word_tf});    
         }
@@ -174,12 +173,12 @@ private:
         for (const string& plus_word : query.plus_words) {
             // для документов, в которых есть плюс слова поискового запроса считаем релевантность
             if (documents_.count(plus_word) != 0) {
-                for (auto [id, tf] : documents_.at(plus_word)) {
-                    // релевантность = сумма(TF * IDF) слов документа, которые есть в посиковом запросе
-                    // IDF (inverse document frequency)
-                    relevance[id] += tf * log(double(document_count_) / 
-                                     double(documents_.at(plus_word).size()));
-                }
+                // IDF (inverse document frequency)
+                double idf = log((double)document_count_ / documents_.at(plus_word).size());
+				for (auto [id, tf] : documents_.at(plus_word)) {
+					// релевантность = сумма(TF * IDF) слов документа, которые есть в поиcковом запросе
+                    relevance[id] += tf*idf;
+			    }
             }
         }
         
