@@ -53,7 +53,7 @@ vector<string> SplitIntoWords(const string& text) {
 
 struct Document {
     // результат поиска
-    int id;                // id документа
+    int id;             // id документа
     double relevance;   // релевантность документа
 };
 
