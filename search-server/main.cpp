@@ -71,9 +71,9 @@ public:
         
         // разбираем документ на слова и исключаем стоп-слова
         const vector<string> words = SplitIntoWordsNoStop(document);
-		
-		// вес слова
-		double weighе_word = 1.0/ words.size();
+        
+        // вес слова
+        double weighе_word = 1.0/ words.size();
         
         // для каждого слова документа
         for (const string& word : words) {
@@ -157,17 +157,17 @@ private:
         }
         return query;
     }
-	
-	void relevance_estimation(const string& word, map<int, double>& relevance) const {
-		// расчёт релевантности
-		
-		// IDF (inverse document frequency)
+    
+    void relevance_estimation(const string& word, map<int, double>& relevance) const {
+        // расчёт релевантности
+        
+        // IDF (inverse document frequency)
         double idf = log(1.0*document_count_ / documents_.at(word).size());
         for (auto [id, tf] : documents_.at(word)) {
             // релевантность = сумма(TF * IDF) слов документа, которые есть в поиcковом запросе
             relevance[id] += tf*idf;
         }
-	}
+    }
 
     vector<Document> FindAllDocuments(const Query query) const {
         // поиск по всем документам поискового сервера
@@ -185,7 +185,7 @@ private:
         for (const string& plus_word : query.plus_words) {
             // для документов, в которых есть плюс слова поискового запроса считаем релевантность
             if (documents_.count(plus_word) != 0) {
-				relevance_estimation(plus_word, relevance);
+                relevance_estimation(plus_word, relevance);
             }
         }
         
