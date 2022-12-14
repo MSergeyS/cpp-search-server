@@ -189,22 +189,6 @@ public:
     }
 
   /**
-   * @brief Ищем ТОЛЬКО по поисковым словам
-   *
-   * @param raw_query  Поисковые слова (слова, которые ищем)
-   * @return Результат поиска (вектор структур(id документа, релевантность, рейтинг))
-   */
-  vector<Document>
-  FindTopDocuments (const string &raw_query) const
-  {
-    return FindTopDocuments (raw_query, []
-    (int document_id, DocumentStatus status, int rating)
-      {
-        return status == DocumentStatus::ACTUAL;
-      });
-  }
-
-  /**
    * @brief Ищем по поисковым словам и статусу документа
    *
    * @param raw_query Поисковые слова (слова, которые ищем)
@@ -212,7 +196,7 @@ public:
    * @return
    */
   vector<Document>
-  FindTopDocuments (const string &raw_query, DocumentStatus status_f) const
+  FindTopDocuments (const string &raw_query, DocumentStatus status_f = DocumentStatus::ACTUAL) const
   {
     return FindTopDocuments (raw_query, [status_f]
     (int document_id, DocumentStatus status, int rating)
