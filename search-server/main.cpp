@@ -6,11 +6,13 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <numeric>
 
 using namespace std;
 
 // максимальное количество документов в результате поиска
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+const double MIN_DELTA_RELEVANCE = 1e-6;
 
 /**
  * @brief Получает строку от пользователя
@@ -168,7 +170,7 @@ public:
       sort (matched_documents.begin (), matched_documents.end (), []
       (const Document &lhs, const Document &rhs)
         {
-          if (abs(lhs.relevance - rhs.relevance) < 1e-6)
+          if (abs(lhs.relevance - rhs.relevance) < MIN_DELTA_RELEVANCE)
             {
               // если релевантности очень близки по убыванию рейтинга
               return lhs.rating > rhs.rating;
@@ -317,11 +319,7 @@ private:
       {
         return 0;
       }
-    int rating_sum = 0;
-    for (const int rating : ratings)
-      {
-        rating_sum += rating;
-      }
+    int rating_sum = std::accumulate(ratings.begin(), ratings.end(), 0);
     return rating_sum / static_cast<int> (ratings.size ());
   }
 
@@ -334,31 +332,43 @@ private:
     set<string> minus_words;
   };
 
+   struct QueryWord {
+       string data;
+       bool is_minus;
+       bool is_stop;
+   };
+
+   QueryWord ParseQueryWord(string text) const {
+       bool is_minus = false;
+       // Word shouldn't be empty
+       if (text[0] == '-') {
+           is_minus = true;
+           text = text.substr(1);
+       }
+       return {text, is_minus, IsStopWord(text)};
+   }
+
   /**
    * @brief Парсим (разбираем) поисковый запрос
    *
    * @param text Строка поискового запроса
    * @return Структура (наборы слов поискового запроса)
    */
-  Query
-  ParseQuery (const string &text) const
-  {
-    Query query;
-    // разбиваем строку поискового запроса на слова и исключаем стоп-слова
-    for (const string &word : SplitIntoWordsNoStop (text))
-      {
-        if (word[0] == '-')
-          {
-            // отрезаем "-" и добавляем в множество минус слов
-            query.minus_words.insert (word.substr (1));
-          }
-        else
-          {
-            query.plus_words.insert (word); // добавляем в множество плюс слов
-          }
-      }
-    return query;
-  }
+   Query ParseQuery(const string& text) const {
+       Query query;
+       // разбиваем строку поискового запроса на слова и исключаем стоп-слова
+       for (const string& word : SplitIntoWords(text)) {
+           const QueryWord query_word = ParseQueryWord(word);
+           if (!query_word.is_stop) {
+               if (query_word.is_minus) {
+                   query.minus_words.insert(query_word.data);
+               } else {
+                   query.plus_words.insert(query_word.data);
+               }
+           }
+       }
+       return query;
+   }
 
   /**
    * @brief Расчитываем IDF (inverse document frequency) слова
@@ -402,8 +412,10 @@ private:
             // для всех документов, где есть данное плюс-слово
             {
               // загружаем параметры в функцию - критерий поиска
-              if (fnc_status (document_id, documents_.at (document_id).status,
-                              documents_.at (document_id).rating))
+              const DocumentData& p_doc_data = documents_.at (document_id);
+
+              if (fnc_status (document_id, p_doc_data.status,
+                              p_doc_data.rating))
                 // если документ удовлетворяет критериям поиска
                 {
                   // рассчитываем релевантность (TF*IDF)
