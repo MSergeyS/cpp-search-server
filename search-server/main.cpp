@@ -14,7 +14,6 @@ using namespace std;
 
 /* Подставьте вашу реализацию класса SearchServer сюда */
 
-using namespace std;
 
 // максимальное количество документов в результате поиска
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
@@ -644,15 +643,24 @@ void TestSearchUserPredicate() {
             [](int document_id, DocumentStatus status, int rating) {
                 return document_id % 2 == 0;
             });
-    ASSERT_EQUAL_HINT(found_docs.size(), static_cast<size_t>(1),
+    ASSERT_EQUAL_HINT(found_docs.size(), 1u,
+            "Не правильно работает фильтрация результатов поиска с использованием "s
+                    + "предиката, задаваемого пользователем."s);
+    ASSERT_EQUAL_HINT(found_docs[0].id, 42,
             "Не правильно работает фильтрация результатов поиска с использованием "s
                     + "предиката, задаваемого пользователем."s);
     found_docs = server.FindTopDocuments("пушистый ухоженный пёс"s,
             [](int document_id, DocumentStatus status, int rating) {
                 return status != DocumentStatus::BANNED;
             });
-    ASSERT_EQUAL_HINT(found_docs.size(), static_cast<size_t>(2),
+    ASSERT_EQUAL_HINT(found_docs.size(), 2u,
             "Не правильно работает фильтрация результатов поиска с использованием "s
+                    + "предиката, задаваемого пользователем."s);
+    ASSERT_EQUAL_HINT(found_docs[0].id, 57,
+            "Не правильно работает фильтрация результатов поиска с использованием "s
+                    + "предиката, задаваемого пользователем."s);
+    ASSERT_EQUAL_HINT(found_docs[1].id, 73,
+             "Не правильно работает фильтрация результатов поиска с использованием "s
                     + "предиката, задаваемого пользователем."s);
 }
 
@@ -689,14 +697,18 @@ void TestSearchByStatus() {
         auto found_docs = server.FindTopDocuments("пушистый ухоженный кот"s,
                 DocumentStatus::ACTUAL);
         size_t size_found_docs = found_docs.size();
-        ASSERT_EQUAL(size_found_docs, static_cast<size_t>(3));
-        // сортируем по возрастанию id
-        sort(found_docs.begin(), found_docs.end(),
-                [](const Document &lhs, const Document &rhs) {
-                    return lhs.id < rhs.id;
-                });
-        for (size_t i = 0; i < size_found_docs; ++i) {
-            ASSERT_EQUAL_HINT(found_docs[i].id, doc_id[i],
+        ASSERT_EQUAL(size_found_docs, 3u);
+//        // сортируем по возрастанию id
+//        sort(found_docs.begin(), found_docs.end(),
+//                [](const Document &lhs, const Document &rhs) {
+//                    return lhs.id < rhs.id;
+//                });
+//        for (size_t i = 0; i < size_found_docs; ++i) {
+//            ASSERT_EQUAL_HINT(found_docs[i].id, doc_id[i],
+//                    "Система должна искать документы, имеющие заданный статус."s);
+//        }
+        for (auto &doc : found_docs) {
+            ASSERT_HINT(find(doc_id.begin(), doc_id.end(), doc.id) != doc_id.end()-1,
                     "Система должна искать документы, имеющие заданный статус."s);
         }
     }
