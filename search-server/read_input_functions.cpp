@@ -1,29 +1,29 @@
+#include <iostream>
 #include <string>
 #include <vector>
-#include <iostream>
 
-#include "read_input_functions.h"
 #include "document.h"
+#include "read_input_functions.h"
 
 using namespace std;
 
 /**
- * @brief Получает строку от пользователя
+ * @brief РџРѕР»СѓС‡Р°РµС‚ СЃС‚СЂРѕРєСѓ РѕС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
  *
- * @return Строка, введенная пользователем
+ * @return РЎС‚СЂРѕРєР°, РІРІРµРґРµРЅРЅР°СЏ РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј
  */
 string ReadLine() {
-    string s;
-    getline(cin, s);
-    return s;
+	string s;
+	getline(cin, s);
+	return s;
 }
 
 /**
- * @brief Оператор вывода для структуры Document
+ * @brief РћРїРµСЂР°С‚РѕСЂ РІС‹РІРѕРґР° РґР»СЏ СЃС‚СЂСѓРєС‚СѓСЂС‹ Document
  */
 ostream& operator<<(ostream &out, const Document &document) {
-    out << "{ "s << "document_id = "s << document.id << ", "s << "relevance = "s
-            << document.relevance << ", "s << "rating = "s << document.rating
-            << " }"s;
-    return out;
+	out << "{ "s << "document_id = "s << document.id << ", "s << "relevance = "s
+			<< document.relevance << ", "s << "rating = "s << document.rating
+			<< " }"s;
+	return out;
 }

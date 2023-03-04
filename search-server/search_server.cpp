@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <cmath>
+#include <iostream>
+#include <iterator>
 #include <map>
 #include <numeric>
 #include <set>
@@ -7,228 +9,294 @@
 #include <string>
 #include <vector>
 
-#include "search_server.h"
-#include "request_queue.h"
 #include "document.h"
 #include "read_input_functions.h"
+#include "request_queue.h"
+#include "search_server.h"
 
 using namespace std;
 
 SearchServer::SearchServer(const string &stop_words_text) :
-        SearchServer(SplitIntoWords(stop_words_text)) // Invoke delegating constructor from string container
+		SearchServer(SplitIntoWords(stop_words_text)) // Invoke delegating constructor from string container
 {
 }
 
 /**
- * @brief Добавляет документ в поисковый сервер
+ * @brief Р”РѕР±Р°РІР»СЏРµС‚ РґРѕРєСѓРјРµРЅС‚ РІ РїРѕРёСЃРєРѕРІС‹Р№ СЃРµСЂРІРµСЂ
  *
- *  - разбирает текст на слова,
- *  - исключает стоп-слова,
- *  - расчитывает ср.рейтинг (средний рейтинг слов в документе),
- *  - расчитывает TF (term frequency) слова в документе
- *  результаты заносит в структуры:
- *  - documents_ (id докутенса, ср.рейтинг, статус)
- *  - word_to_document_freqs_ (слово, map<id документа, TF>)
+ *  - СЂР°Р·Р±РёСЂР°РµС‚ С‚РµРєСЃС‚ РЅР° СЃР»РѕРІР°,
+ *  - РёСЃРєР»СЋС‡Р°РµС‚ СЃС‚РѕРї-СЃР»РѕРІР°,
+ *  - СЂР°СЃС‡РёС‚С‹РІР°РµС‚ СЃСЂ.СЂРµР№С‚РёРЅРі (СЃСЂРµРґРЅРёР№ СЂРµР№С‚РёРЅРі СЃР»РѕРІ РІ РґРѕРєСѓРјРµРЅС‚Рµ),
+ *  - СЂР°СЃС‡РёС‚С‹РІР°РµС‚ TF (term frequency) СЃР»РѕРІР° РІ РґРѕРєСѓРјРµРЅС‚Рµ
+ *  СЂРµР·СѓР»СЊС‚Р°С‚С‹ Р·Р°РЅРѕСЃРёС‚ РІ РєРѕРЅС‚РµР№РЅРµСЂС‹:
+ *  - documents_ (id РґРѕРєСѓРјРµРЅС‚Р°, СЃСЂ.СЂРµР№С‚РёРЅРі, СЃС‚Р°С‚СѓСЃ)
+ *  - documents_ids_
+ *  - word_to_document_freqs_ (СЃР»РѕРІРѕ, map<id РґРѕРєСѓРјРµРЅС‚Р°, TF>)
+ *  - document_to_word_freqs_ (id РґРѕРєСѓРјРµРЅС‚Р°, map<СЃР»РѕРІРѕ, TF>)
  *
- * @param document_id id документа
- * @param document    Текст документа
- * @param status      Статус документа
- * @param ratings     Рейтинги слов
+ * @param document_id id РґРѕРєСѓРјРµРЅС‚Р°
+ * @param document    РўРµРєСЃС‚ РґРѕРєСѓРјРµРЅС‚Р°
+ * @param status      РЎС‚Р°С‚СѓСЃ РґРѕРєСѓРјРµРЅС‚Р°
+ * @param ratings     Р РµР№С‚РёРЅРіРё СЃР»РѕРІ
  */
 void SearchServer::AddDocument(int document_id, const string &document,
-        DocumentStatus status, const vector<int> &ratings) {
-    if (document_id < 0) {
-        throw invalid_argument(
-                "Попытка добавления документа с отрицательный id !!!"s);
-    }
-    if (documents_.count(document_id) != 0) {
-        throw invalid_argument(
-                "Попытка добавления документа с id ранее добавленного документа !!!"s);
-    }
+		DocumentStatus status, const vector<int> &ratings) {
+	if (document_id < 0) {
+		throw invalid_argument(
+				"РџРѕРїС‹С‚РєР° РґРѕР±Р°РІР»РµРЅРёСЏ РґРѕРєСѓРјРµРЅС‚Р° СЃ РѕС‚СЂРёС†Р°С‚РµР»СЊРЅС‹Р№ id !!!"s);
+	}
+	if (documents_.count(document_id) != 0) {
+		throw invalid_argument(
+				"РџРѕРїС‹С‚РєР° РґРѕР±Р°РІР»РµРЅРёСЏ РґРѕРєСѓРјРµРЅС‚Р° СЃ id СЂР°РЅРµРµ РґРѕР±Р°РІР»РµРЅРЅРѕРіРѕ РґРѕРєСѓРјРµРЅС‚Р° !!!"s);
+	}
 //        if (!IsValidWord(document)) {
 //            throw invalid_argument(
-//                    "invalid_argument("недопустимые символы!!!"s)"s);
+//                    "invalid_argument("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ!!!"s)"s);
 //        }
-    const vector<string> words = SplitIntoWordsNoStop(document);
-    const double inv_word_count = 1.0 / words.size();
-    for (const string &word : words) {
-        word_to_document_freqs_[word][document_id] += inv_word_count;
-    }
-    documents_.emplace(document_id,
-            DocumentData { ComputeAverageRating(ratings), status });
-    documents_ids.push_back(document_id);
+	const vector<string> words = SplitIntoWordsNoStop(document);
+	const double inv_word_count = 1.0 / words.size();
+	for (const string &word : words) {
+		word_to_document_freqs_[word][document_id] += inv_word_count;
+		document_to_word_freqs_[document_id][word] += inv_word_count;
+	}
+	documents_.emplace(document_id,
+			DocumentData { ComputeAverageRating(ratings), status });
+	documents_ids_.push_back(document_id);
 }
 
 /**
- * @brief Компаратор стоп-слов
+ * @brief РЈРґР°Р»СЏРµС‚ РґРѕРєСѓРјРµРЅС‚ РёР· РїРѕРёСЃРєРѕРІРѕРіРѕ СЃРµСЂРІРµСЂР°
  *
- * (слово == стоп-слово) -> true
+ *  СѓРґР°Р»СЏРµС‚ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РґРѕРєСѓРјРµРЅС‚Рµ РёР· РєРѕРЅС‚РµР№РЅРµСЂРѕРІ:
+ *  - documents_ (id РґРѕРєСѓРјРµРЅС‚Р°, СЃСЂ.СЂРµР№С‚РёРЅРі, СЃС‚Р°С‚СѓСЃ)
+ *  - documents_ids_
+ *  - word_to_document_freqs_ (СЃР»РѕРІРѕ, map<id РґРѕРєСѓРјРµРЅС‚Р°, TF>)
+ *  - document_to_word_freqs_ (id РґРѕРєСѓРјРµРЅС‚Р°, map<СЃР»РѕРІРѕ, TF>)
  *
- * @param word Слово, которое проверяем (есть ли оно в списке стоп-слов)
- * @return true - если слово есть в списке стоп-слов, false - если нет
+ * @param document_id id РґРѕРєСѓРјРµРЅС‚Р°
+ */
+void SearchServer::RemoveDocument(int document_id) {
+	if (documents_.count(document_id)) {
+		documents_.erase(document_id);
+	}
+	auto inx = find(documents_ids_.begin(), documents_ids_.end(), document_id);
+	if (inx != documents_ids_.end()) {
+		documents_ids_.erase(inx);
+	}
+	auto word_freq = GetWordFrequencies(document_id);
+	if (!word_freq.empty()) {
+		document_to_word_freqs_.erase(document_id);
+		for (auto [word, freq] : word_freq) {
+			word_to_document_freqs_.at(word).erase(document_id);
+		}
+	}
+}
+
+/**
+ * @brief РљРѕРјРїР°СЂР°С‚РѕСЂ СЃС‚РѕРї-СЃР»РѕРІ
+ *
+ * (СЃР»РѕРІРѕ == СЃС‚РѕРї-СЃР»РѕРІРѕ) -> true
+ *
+ * @param word РЎР»РѕРІРѕ, РєРѕС‚РѕСЂРѕРµ РїСЂРѕРІРµСЂСЏРµРј (РµСЃС‚СЊ Р»Рё РѕРЅРѕ РІ СЃРїРёСЃРєРµ СЃС‚РѕРї-СЃР»РѕРІ)
+ * @return true - РµСЃР»Рё СЃР»РѕРІРѕ РµСЃС‚СЊ РІ СЃРїРёСЃРєРµ СЃС‚РѕРї-СЃР»РѕРІ, false - РµСЃР»Рё РЅРµС‚
  */
 bool SearchServer::IsStopWord(const string &word) const {
-    return stop_words_.count(word) > 0;
+	return stop_words_.count(word) > 0;
 }
 
 /**
- * @brief Парсим (разбираем) слова из поискового запроса и
- *        проверяем на наличие запрещённых вариантов использования символа "-".
+ * @brief РџР°СЂСЃРёРј (СЂР°Р·Р±РёСЂР°РµРј) СЃР»РѕРІР° РёР· РїРѕРёСЃРєРѕРІРѕРіРѕ Р·Р°РїСЂРѕСЃР° Рё
+ *        РїСЂРѕРІРµСЂСЏРµРј РЅР° РЅР°Р»РёС‡РёРµ Р·Р°РїСЂРµС‰С‘РЅРЅС‹С… РІР°СЂРёР°РЅС‚РѕРІ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ СЃРёРјРІРѕР»Р° "-".
  *
- * @param text Строка поискового запроса
- * @return Структура (наборы слов поискового запроса)
+ * @param text РЎС‚СЂРѕРєР° РїРѕРёСЃРєРѕРІРѕРіРѕ Р·Р°РїСЂРѕСЃР°
+ * @return РЎС‚СЂСѓРєС‚СѓСЂР° (РЅР°Р±РѕСЂС‹ СЃР»РѕРІ РїРѕРёСЃРєРѕРІРѕРіРѕ Р·Р°РїСЂРѕСЃР°)
  */
 SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {
-    bool is_minus = false;
-    // Word shouldn't be empty
-    if (text[0] == '-') {
-        if (text[1] == '-') {
-            throw invalid_argument("2 символа \"минус\" перед словом !!!"s);
-        }
-        if (text.size() == 1) {
-            throw invalid_argument(
-                    "отсутствует текст после символа \"минус\" !!!"s);
-        }
-        is_minus = true;
-        text = text.substr(1);
-    }
-    return {text, is_minus, IsStopWord(text)};
+	bool is_minus = false;
+	// Word shouldn't be empty
+	if (text[0] == '-') {
+		if (text[1] == '-') {
+			throw invalid_argument("2 СЃРёРјРІРѕР»Р° \"РјРёРЅСѓСЃ\" РїРµСЂРµРґ СЃР»РѕРІРѕРј !!!"s);
+		}
+		if (text.size() == 1) {
+			throw invalid_argument(
+					"РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚ С‚РµРєСЃС‚ РїРѕСЃР»Рµ СЃРёРјРІРѕР»Р° \"РјРёРЅСѓСЃ\" !!!"s);
+		}
+		is_minus = true;
+		text = text.substr(1);
+	}
+	return {text, is_minus, IsStopWord(text)};
 }
 
 /**
- * @brief Парсим (разбираем) поисковый запрос
+ * @brief РџР°СЂСЃРёРј (СЂР°Р·Р±РёСЂР°РµРј) РїРѕРёСЃРєРѕРІС‹Р№ Р·Р°РїСЂРѕСЃ
  *
- * @param text Строка поискового запроса
- * @return Структура (наборы слов поискового запроса)
+ * @param text РЎС‚СЂРѕРєР° РїРѕРёСЃРєРѕРІРѕРіРѕ Р·Р°РїСЂРѕСЃР°
+ * @return РЎС‚СЂСѓРєС‚СѓСЂР° (РЅР°Р±РѕСЂС‹ СЃР»РѕРІ РїРѕРёСЃРєРѕРІРѕРіРѕ Р·Р°РїСЂРѕСЃР°)
  */
 SearchServer::Query SearchServer::ParseQuery(const string &text) const {
-    SearchServer::Query query;
-    for (const string &word : SplitIntoWords(text)) {
-        SearchServer::QueryWord query_word = ParseQueryWord(word);
+	SearchServer::Query query;
+	for (const string &word : SplitIntoWords(text)) {
+		SearchServer::QueryWord query_word = ParseQueryWord(word);
 
-        if (!query_word.is_stop) {
-            if (query_word.is_minus) {
-                query.minus_words.insert(query_word.data);
-            } else {
-                query.plus_words.insert(query_word.data);
-            }
-        }
-    }
-    return query;
+		if (!query_word.is_stop) {
+			if (query_word.is_minus) {
+				query.minus_words.insert(query_word.data);
+			} else {
+				query.plus_words.insert(query_word.data);
+			}
+		}
+	}
+	return query;
 }
 
 /**
- * @brief Получает количество документов в поисковом сервере
+ * @brief РџРѕР»СѓС‡Р°РµС‚ РєРѕР»РёС‡РµСЃС‚РІРѕ РґРѕРєСѓРјРµРЅС‚РѕРІ РІ РїРѕРёСЃРєРѕРІРѕРј СЃРµСЂРІРµСЂРµ
  *
- * @return Количество документов в поисковом сервере
+ * @return РљРѕР»РёС‡РµСЃС‚РІРѕ РґРѕРєСѓРјРµРЅС‚РѕРІ РІ РїРѕРёСЃРєРѕРІРѕРј СЃРµСЂРІРµСЂРµ
  */
 int SearchServer::GetDocumentCount() const {
-    return SearchServer::documents_.size();
+	return SearchServer::documents_.size();
 }
 
+
 tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(
-        const string &raw_query, int document_id) const {
+		const string &raw_query, int document_id) const {
 //        if (!IsValidWord(raw_query)) {
 //            throw invalid_argument("!!!"s);
 //        }
-    SearchServer::Query query = ParseQuery(raw_query);
-    vector<string> matched_words;
-    for (const string &word : query.plus_words) {
-        if (SearchServer::word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        if (SearchServer::word_to_document_freqs_.at(word).count(document_id)) {
-            matched_words.push_back(word);
-        }
-    }
-    for (const string &word : query.minus_words) {
-        if (SearchServer::word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        if (SearchServer::word_to_document_freqs_.at(word).count(document_id)) {
-            matched_words.clear();
-            break;
-        }
-    }
-    return tuple(matched_words, documents_.at(document_id).status);
+	Query query = ParseQuery(raw_query);
+	vector<string> matched_words;
+	for (const string &word : query.plus_words) {
+		if (word_to_document_freqs_.count(word) == 0) {
+			continue;
+		}
+		if (word_to_document_freqs_.at(word).count(document_id)) {
+			matched_words.push_back(word);
+		}
+	}
+	for (const string &word : query.minus_words) {
+		if (word_to_document_freqs_.count(word) == 0) {
+			continue;
+		}
+		if (word_to_document_freqs_.at(word).count(document_id)) {
+			matched_words.clear();
+			break;
+		}
+	}
+	return tuple(matched_words, documents_.at(document_id).status);
 }
 
 /**
- * @brief Получает id документа по порядковому номеру в поисковом сервере
+ * @brief Р’РѕР·РІСЂР°С‰Р°РµС‚ РёС‚РµСЂР°С‚РѕСЂ РЅР° РЅР°С‡Р°Р»Рѕ РІ РїРѕРёСЃРєРѕРІРѕРј СЃРµСЂРІРµСЂРµ
  *
- * @param index  Порядковый номер документа в поисковом сервере
- * @return id документа
+ * @return Р’РѕР·РІСЂР°С‰Р°РµС‚ РІРѕР·РІСЂР°С‰Р°РµС‚ РёС‚РµСЂР°С‚РѕСЂ РЅР° РїРµСЂРІС‹Р№ СЌР»РµРјРµРЅС‚
+ */
+vector<int>::iterator SearchServer::begin() {
+	return documents_ids_.begin();
+}
+
+/**
+ * @brief Р’РѕР·РІСЂР°С‰Р°РµС‚ РёС‚РµСЂР°С‚РѕСЂ РЅР° РєРѕРЅРµС† РІ РїРѕРёСЃРєРѕРІРѕРј СЃРµСЂРІРµСЂРµ
+ *
+ * @return Р’РѕР·РІСЂР°С‰Р°РµС‚ РІРѕР·РІСЂР°С‰Р°РµС‚ РёС‚РµСЂР°С‚РѕСЂ РЅР° СЌР»РµРјРµРЅС‚, СЃР»РµРґСѓСЋС‰РёР№ Р·Р° РїРѕСЃР»РµРґРЅРёРј СЌР»РµРјРµРЅС‚РѕРј
+ */
+vector<int>::iterator SearchServer::end() {
+	return documents_ids_.end();
+}
+
+/**
+ * @brief РџРѕР»СѓС‡Р°РµС‚ id РґРѕРєСѓРјРµРЅС‚Р° РїРѕ РїРѕСЂСЏРґРєРѕРІРѕРјСѓ РЅРѕРјРµСЂСѓ РІ РїРѕРёСЃРєРѕРІРѕРј СЃРµСЂРІРµСЂРµ
+ *
+ * @param index  РџРѕСЂСЏРґРєРѕРІС‹Р№ РЅРѕРјРµСЂ РґРѕРєСѓРјРµРЅС‚Р° РІ РїРѕРёСЃРєРѕРІРѕРј СЃРµСЂРІРµСЂРµ
+ * @return id РґРѕРєСѓРјРµРЅС‚Р°
  */
 int SearchServer::GetDocumentId(int index) const {
-    if ((index < 0) || (index > (GetDocumentCount() - 1))) {
-        throw out_of_range(
-                "id документа выходит за пределы допустимого диапазона!!!"s);
-    }
-    return documents_ids[index];
+	if ((index < 0) || (index > (GetDocumentCount() - 1))) {
+		throw out_of_range(
+				"id РґРѕРєСѓРјРµРЅС‚Р° РІС‹С…РѕРґРёС‚ Р·Р° РїСЂРµРґРµР»С‹ РґРѕРїСѓСЃС‚РёРјРѕРіРѕ РґРёР°РїР°Р·РѕРЅР°!!!"s);
+	}
+	return documents_ids_[index];
 }
+
 
 bool SearchServer::IsValidWord(const string &word) {
-    // A valid word must not contain special characters
-    return none_of(word.begin(), word.end(), [](char c) {
-        return c >= '\0' && c < ' ';
-    });
+	// A valid word must not contain special characters
+	return none_of(word.begin(), word.end(), [](char c) {
+		return c >= '\0' && c < ' ';
+	});
 }
 
 /**
- * @brief Разбивает строку на слова и исключает стоп-слова
+ * @brief Р Р°Р·Р±РёРІР°РµС‚ СЃС‚СЂРѕРєСѓ РЅР° СЃР»РѕРІР° Рё РёСЃРєР»СЋС‡Р°РµС‚ СЃС‚РѕРї-СЃР»РѕРІР°
  *
- * @param text Строка, которую разбираем
- * @return Вектор слов, входящих в троку исключая стоп-слова
+ * @param text РЎС‚СЂРѕРєР°, РєРѕС‚РѕСЂСѓСЋ СЂР°Р·Р±РёСЂР°РµРј
+ * @return Р’РµРєС‚РѕСЂ СЃР»РѕРІ, РІС…РѕРґСЏС‰РёС… РІ С‚СЂРѕРєСѓ РёСЃРєР»СЋС‡Р°СЏ СЃС‚РѕРї-СЃР»РѕРІР°
  */
 vector<string> SearchServer::SplitIntoWordsNoStop(const string &text) const {
-    vector<string> words;
-    for (const string &word : SplitIntoWords(text)) {
-        if (!IsStopWord(word)) {
-            words.push_back(word);
-        }
-    }
-    return words;
+	vector<string> words;
+	for (const string &word : SplitIntoWords(text)) {
+		if (!IsStopWord(word)) {
+			words.push_back(word);
+		}
+	}
+	return words;
 }
 
 /**
- * @brief Расчитываем средний рейтинг
+ * @brief Р Р°СЃС‡РёС‚С‹РІР°РµРј СЃСЂРµРґРЅРёР№ СЂРµР№С‚РёРЅРі
  *
- *  (среднее арифметическое)
+ *  (СЃСЂРµРґРЅРµРµ Р°СЂРёС„РјРµС‚РёС‡РµСЃРєРѕРµ)
  *
- * @param ratings Рейтинги слов
- * @return  Ср.рейтинг слов
+ * @param ratings Р РµР№С‚РёРЅРіРё СЃР»РѕРІ
+ * @return  РЎСЂ.СЂРµР№С‚РёРЅРі СЃР»РѕРІ
  */
 int SearchServer::ComputeAverageRating(const vector<int> &ratings) {
-    if (ratings.empty()) {
-        return 0;
-    }
-    int rating_sum = accumulate(ratings.begin(), ratings.end(), 0);
-    return rating_sum / static_cast<int>(ratings.size());
+	if (ratings.empty()) {
+		return 0;
+	}
+	int rating_sum = accumulate(ratings.begin(), ratings.end(), 0);
+	return rating_sum / static_cast<int>(ratings.size());
 }
 
 /**
- * @brief Расчитываем IDF (inverse document frequency) слова
- *number_query_without_result
- * @param word Слово
+ * @brief Р Р°СЃС‡РёС‚С‹РІР°РµРј IDF (inverse document frequency) СЃР»РѕРІР°
+ *
+ * @param word РЎР»РѕРІРѕ
  * @return IDF
  */
 double SearchServer::ComputeWordInverseDocumentFreq(const string &word) const {
-    return std::log(
-            GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
+	return std::log(
+			GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
 }
 
 vector<Document> SearchServer::FindTopDocuments(const string &raw_query,
-        DocumentStatus status) const {
-    vector<Document> documents = FindTopDocuments(raw_query,
-            [status](int document_id, DocumentStatus document_status,
-                    int rating) {
-                return document_status == status;
-            });
-    return documents;
+		DocumentStatus status) const {
+	vector<Document> documents = FindTopDocuments(raw_query,
+			[status](int document_id, DocumentStatus document_status,
+					int rating) {
+				return document_status == status;
+			});
+	return documents;
 }
 
 vector<Document> SearchServer::FindTopDocuments(const string &raw_query) const {
-    vector<Document> documents = FindTopDocuments(raw_query,
-            DocumentStatus::ACTUAL);
-    return documents;
+	vector<Document> documents = FindTopDocuments(raw_query,
+			DocumentStatus::ACTUAL);
+	return documents;
+}
+
+/**
+ * @brief РџРѕР»СѓС‡РµРЅРёРµ С‡Р°СЃС‚РѕС‚ СЃР»РѕРІ (IDF - inverse document frequency) РїРѕ id РґРѕРєСѓРјРµРЅС‚Р°
+ *
+ * @param document_id id РґРѕРєСѓРјРµРЅС‚Р°
+ * @return РєРѕРЅС‚РµР№РЅРµСЂ СЃР»РѕРІРѕ - IDF
+ */
+const map<string, double>& SearchServer::GetWordFrequencies(
+		int document_id) const {
+	if (document_to_word_freqs_.count(document_id)) {
+		return document_to_word_freqs_.at(document_id);
+	}
+	static map<string, double> empty_map;
+	return empty_map;
 }

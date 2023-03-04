@@ -5,28 +5,28 @@
 using namespace std;
 
 /**
- * @brief Разбирает строку на слова
+ * @brief Р Р°Р·Р±РёСЂР°РµС‚ СЃС‚СЂРѕРєСѓ РЅР° СЃР»РѕРІР°
  *
- * @param text Строка
- * @return Вектор слов
+ * @param text РЎС‚СЂРѕРєР°
+ * @return Р’РµРєС‚РѕСЂ СЃР»РѕРІ
  */
 vector<string> SplitIntoWords(const string &text) {
-    vector<string> words;
-    string word;
-    for (const char c : text) {
-        if (c == ' ') {
-            if (!word.empty()) {
-                words.push_back(word);
-                word.clear();
-            }
-        } else if (c >= '\0' && c < ' ') {
-            throw invalid_argument("недопустимые символы !!!"s);
-        } else {
-            word += c;
-        }
-    }
-    if (!word.empty()) {
-        words.push_back(word);
-    }
-    return words;
+	vector<string> words;
+	string word;
+	for (const char c : text) {
+		if (c == ' ') {
+			if (!word.empty()) {
+				words.push_back(word);
+				word.clear();
+			}
+		} else if (c >= '\0' && c < ' ') {
+			throw invalid_argument("РЅРµРґРѕРїСѓСЃС‚РёРјС‹Рµ СЃРёРјРІРѕР»С‹ !!!"s);
+		} else {
+			word += c;
+		}
+	}
+	if (!word.empty()) {
+		words.push_back(word);
+	}
+	return words;
 }

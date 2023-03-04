@@ -2,207 +2,214 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
+#include <set>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <set>
-#include <map>
-#include <stdexcept>
 
 #include "document.h"
 
 using namespace std;
 
-// максимальное количество документов в результате поиска
+// РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РґРѕРєСѓРјРµРЅС‚РѕРІ РІ СЂРµР·СѓР»СЊС‚Р°С‚Рµ РїРѕРёСЃРєР°
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 const double MIN_DELTA_RELEVANCE = 1e-6;
 
 class SearchServer {
 public:
-    template<typename StringContainer>
-    explicit SearchServer(const StringContainer &stop_words);
+	template<typename StringContainer>
+	explicit SearchServer(const StringContainer &stop_words);
 
-    explicit SearchServer(const string &stop_words_text);
+	explicit SearchServer(const string &stop_words_text);
 
-    void AddDocument(int document_id, const string &document,
-            DocumentStatus status, const vector<int> &ratings);
+	void AddDocument(int document_id, const string &document,
+			DocumentStatus status, const vector<int> &ratings);
 
-    template<typename DocumentPredicate>
-    vector<Document> FindTopDocuments(const string &raw_query,
-            DocumentPredicate document_predicate) const;
+	void RemoveDocument(int document_id);
 
-    vector<Document> FindTopDocuments(const string &raw_query,
-            DocumentStatus status) const;
+	template<typename DocumentPredicate>
+	vector<Document> FindTopDocuments(const string &raw_query,
+			DocumentPredicate document_predicate) const;
 
-    vector<Document> FindTopDocuments(const string &raw_query) const;
+	vector<Document> FindTopDocuments(const string &raw_query,
+			DocumentStatus status) const;
 
-    int GetDocumentCount() const;
+	vector<Document> FindTopDocuments(const string &raw_query) const;
 
-    tuple<vector<string>, DocumentStatus> MatchDocument(const string &raw_query,
-            int document_id) const;
+	int GetDocumentCount() const;
 
-    int GetDocumentId(int index) const;
+	tuple<vector<string>, DocumentStatus> MatchDocument(const string &raw_query,
+			int document_id) const;
+
+	int GetDocumentId(int index) const;
+
+	vector<int>::iterator begin();
+
+	vector<int>::iterator end();
+
+	const map<string, double>& GetWordFrequencies(int document_id) const;
 
 private:
 
-    struct DocumentData {
-        int rating;             // ср.рейтинг
-        DocumentStatus status;  // статус
-    };
+	struct DocumentData {
+        int rating;             // СЃСЂ.СЂРµР№С‚РёРЅРі
+        DocumentStatus status;  // СЃС‚Р°С‚СѓСЃ
+	};
 
-    struct QueryWord {
-        string data;
-        bool is_minus;
-        bool is_stop;
-    };
+	struct QueryWord {
+		string data;
+		bool is_minus;
+		bool is_stop;
+	};
 
-    struct Query {
-        set<string> plus_words;
-        set<string> minus_words;
-    };
+	struct Query {
+		set<string> plus_words;
+		set<string> minus_words;
+	};
 
-    // стоп слова
-    set<string> stop_words_;
+	// СЃС‚РѕРї СЃР»РѕРІР°
+	set<string> stop_words_;
 
-    //
-    map<string, map<int, double>> word_to_document_freqs_;
+	// РґРѕРєСѓРјРµРЅС‚С‹ РІ РїРѕРёСЃРєРѕРІРѕРј СЃРµСЂРІРµСЂРµ ({id РґРѕРєСѓРјРµРЅС‚Р°, РёРЅС„РѕСЂРјР°С†РёСЏ Рѕ РґРѕРєСѓРјРµРЅС‚Рµ (СЃСЂ.СЂРµР№С‚РёРЅРі, СЃС‚Р°С‚СѓСЃ)})
+	map<int, DocumentData> documents_;
+	vector<int> documents_ids_;
+	map<string, map<int, double>> word_to_document_freqs_;
+	map<int, map<string, double>> document_to_word_freqs_;
 
-    // документы в поисковом сервере ({id документа, информация о документе (ср.рейтинг, статус)})
-    map<int, DocumentData> documents_;
-    vector<int> documents_ids;
+	static bool IsValidWord(const string &word);
 
-    static bool IsValidWord(const string &word);
+	template<typename StringContainer>
+	static set<string> MakeUniqueNonEmptyStrings(
+			const StringContainer &strings);
 
-    template<typename StringContainer>
-    static set<string> MakeUniqueNonEmptyStrings(
-            const StringContainer &strings);
+	bool IsStopWord(const string &word) const;
 
-    bool IsStopWord(const string &word) const;
+	vector<string> SplitIntoWordsNoStop(const string &text) const;
 
-    vector<string> SplitIntoWordsNoStop(const string &text) const;
+	static int ComputeAverageRating(const vector<int> &ratings);
 
-    static int ComputeAverageRating(const vector<int> &ratings);
+	QueryWord ParseQueryWord(string text) const;
 
-    QueryWord ParseQueryWord(string text) const;
+	Query ParseQuery(const string &text) const;
 
-    Query ParseQuery(const string &text) const;
+	double ComputeWordInverseDocumentFreq(const string &word) const;
 
-    double ComputeWordInverseDocumentFreq(const string &word) const;
-
-    template<typename DocumentPredicate>
-    vector<Document> FindAllDocuments(const SearchServer::Query &query,
-            DocumentPredicate document_predicate) const;
+	template<typename DocumentPredicate>
+	vector<Document> FindAllDocuments(const SearchServer::Query &query,
+			DocumentPredicate document_predicate) const;
 
 };
 
-// Шаблонные функции
+// РЁР°Р±Р»РѕРЅРЅС‹Рµ С„СѓРЅРєС†РёРё
 
 template<typename StringContainer>
 SearchServer::SearchServer(const StringContainer &stop_words) :
-        stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
+		stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
 }
 
 /**
- * @brief Ищет 5 документов с наибольшей релевантностью
+ * @brief РС‰РµС‚ 5 РґРѕРєСѓРјРµРЅС‚РѕРІ СЃ РЅР°РёР±РѕР»СЊС€РµР№ СЂРµР»РµРІР°РЅС‚РЅРѕСЃС‚СЊСЋ
  *
- * Ищет по поисковым словам и критерию, который определяется функцией
- * (функциональный объект, который поступает на вход)
+ * РС‰РµС‚ РїРѕ РїРѕРёСЃРєРѕРІС‹Рј СЃР»РѕРІР°Рј Рё РєСЂРёС‚РµСЂРёСЋ, РєРѕС‚РѕСЂС‹Р№ РѕРїСЂРµРґРµР»СЏРµС‚СЃСЏ С„СѓРЅРєС†РёРµР№
+ * (С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅС‹Р№ РѕР±СЉРµРєС‚, РєРѕС‚РѕСЂС‹Р№ РїРѕСЃС‚СѓРїР°РµС‚ РЅР° РІС…РѕРґ)
  *
- * @param raw_query   Поисковые слова (слова, которые ищем)
- * @tparam document_predicate Критерий поиска (функция)
- * @return Результат поиска (вектор структур(id документа, релевантность, рейтинг))
+ * @param raw_query   РџРѕРёСЃРєРѕРІС‹Рµ СЃР»РѕРІР° (СЃР»РѕРІР°, РєРѕС‚РѕСЂС‹Рµ РёС‰РµРј)
+ * @tparam document_predicate РљСЂРёС‚РµСЂРёР№ РїРѕРёСЃРєР° (С„СѓРЅРєС†РёСЏ)
+ * @return Р РµР·СѓР»СЊС‚Р°С‚ РїРѕРёСЃРєР° (РІРµРєС‚РѕСЂ СЃС‚СЂСѓРєС‚СѓСЂ(id РґРѕРєСѓРјРµРЅС‚Р°, СЂРµР»РµРІР°РЅС‚РЅРѕСЃС‚СЊ, СЂРµР№С‚РёРЅРі))
  */
 template<typename DocumentPredicate>
 vector<Document> SearchServer::FindTopDocuments(const string &raw_query,
-        DocumentPredicate document_predicate) const {
-    Query query = ParseQuery(raw_query);
+		DocumentPredicate document_predicate) const {
+	Query query = ParseQuery(raw_query);
 //        if (!IsValidWord(raw_query)) {
 //            throw invalid_argument("--!!!"s);
 //        }
-    vector<Document> documents = FindAllDocuments(query, document_predicate);
+	vector<Document> documents = FindAllDocuments(query, document_predicate);
 
-    sort(documents.begin(), documents.end(),
-            [](const Document &lhs, const Document &rhs) {
-                if (std::abs(lhs.relevance - rhs.relevance)
-                        < MIN_DELTA_RELEVANCE) {
-                    return lhs.rating > rhs.rating;
-                } else {
-                    return lhs.relevance > rhs.relevance;
-                }
-            });
-    if (documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
-        documents.resize(MAX_RESULT_DOCUMENT_COUNT);
-    }
-    return documents;
+	sort(documents.begin(), documents.end(),
+			[](const Document &lhs, const Document &rhs) {
+				if (std::abs(lhs.relevance - rhs.relevance)
+						< MIN_DELTA_RELEVANCE) {
+					return lhs.rating > rhs.rating;
+				} else {
+					return lhs.relevance > rhs.relevance;
+				}
+			});
+	if (documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
+		documents.resize(MAX_RESULT_DOCUMENT_COUNT);
+	}
+	return documents;
 }
 
 /**
- * @brief Ищем документы удовлетворяющие критериям поиска
+ * @brief РС‰РµРј РґРѕРєСѓРјРµРЅС‚С‹ СѓРґРѕРІР»РµС‚РІРѕСЂСЏСЋС‰РёРµ РєСЂРёС‚РµСЂРёСЏРј РїРѕРёСЃРєР°
  *
- * Ищет по поисковым словам и критерию, который определяется функцией
- * (функциональный объект, который поступает на вход)
+ * РС‰РµС‚ РїРѕ РїРѕРёСЃРєРѕРІС‹Рј СЃР»РѕРІР°Рј Рё РєСЂРёС‚РµСЂРёСЋ, РєРѕС‚РѕСЂС‹Р№ РѕРїСЂРµРґРµР»СЏРµС‚СЃСЏ С„СѓРЅРєС†РёРµР№
+ * (С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅС‹Р№ РѕР±СЉРµРєС‚, РєРѕС‚РѕСЂС‹Р№ РїРѕСЃС‚СѓРїР°РµС‚ РЅР° РІС…РѕРґ)
  *
- * @param query Слова поискового запроса
- * @tparam document_predicate Критерий поиска (функция)
- * @return Вектор документов (id документа, релевантность, ср.рейтинг)
+ * @param query РЎР»РѕРІР° РїРѕРёСЃРєРѕРІРѕРіРѕ Р·Р°РїСЂРѕСЃР°
+ * @tparam document_predicate РљСЂРёС‚РµСЂРёР№ РїРѕРёСЃРєР° (С„СѓРЅРєС†РёСЏ)
+ * @return Р’РµРєС‚РѕСЂ РґРѕРєСѓРјРµРЅС‚РѕРІ (id РґРѕРєСѓРјРµРЅС‚Р°, СЂРµР»РµРІР°РЅС‚РЅРѕСЃС‚СЊ, СЃСЂ.СЂРµР№С‚РёРЅРі)
  */
 template<typename DocumentPredicate>
 vector<Document> SearchServer::FindAllDocuments(
-        const SearchServer::Query &query,
-        DocumentPredicate document_predicate) const {
-    map<int, double> document_to_relevance;
-    for (const string &word : query.plus_words) {
-        if (word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        const double inverse_document_freq = ComputeWordInverseDocumentFreq(
-                word);
-        for (const auto [document_id, term_freq] : word_to_document_freqs_.at(
-                word)) {
-            const DocumentData &document_data = documents_.at(document_id);
-            if (document_predicate(document_id, document_data.status,
-                    document_data.rating)) {
-                document_to_relevance[document_id] += term_freq
-                        * inverse_document_freq;
-            }
-        }
-    }
+		const SearchServer::Query &query,
+		DocumentPredicate document_predicate) const {
+	map<int, double> document_to_relevance;
+	for (const string &word : query.plus_words) {
+		if (word_to_document_freqs_.count(word) == 0) {
+			continue;
+		}
+		const double inverse_document_freq = ComputeWordInverseDocumentFreq(
+				word);
+		for (const auto [document_id, term_freq] : word_to_document_freqs_.at(
+				word)) {
+			const DocumentData &document_data = documents_.at(document_id);
+			if (document_predicate(document_id, document_data.status,
+					document_data.rating)) {
+				document_to_relevance[document_id] += term_freq
+						* inverse_document_freq;
+			}
+		}
+	}
 
-    for (const string &word : query.minus_words) {
-        if (word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        for (const auto [document_id, _] : word_to_document_freqs_.at(word)) {
-            document_to_relevance.erase(document_id);
-        }
-    }
+	for (const string &word : query.minus_words) {
+		if (word_to_document_freqs_.count(word) == 0) {
+			continue;
+		}
+		for (const auto [document_id, _] : word_to_document_freqs_.at(word)) {
+			document_to_relevance.erase(document_id);
+		}
+	}
 
-    vector<Document> matched_documents;
-    for (const auto [document_id, relevance] : document_to_relevance) {
-        matched_documents.push_back(
-                { document_id, relevance, documents_.at(document_id).rating });
-    }
-    return matched_documents;
+	vector<Document> matched_documents;
+	for (const auto [document_id, relevance] : document_to_relevance) {
+		matched_documents.push_back(
+				{ document_id, relevance, documents_.at(document_id).rating });
+	}
+	return matched_documents;
 }
 
 /**
- * @brief Проверяет слова из входного контейнера на отсутствие пустых элементов и
- *  недопустимых символов - затем преобразует в set
+ * @brief РџСЂРѕРІРµСЂСЏРµС‚ СЃР»РѕРІР° РёР· РІС…РѕРґРЅРѕРіРѕ РєРѕРЅС‚РµР№РЅРµСЂР° РЅР° РѕС‚СЃСѓС‚СЃС‚РІРёРµ РїСѓСЃС‚С‹С… СЌР»РµРјРµРЅС‚РѕРІ Рё
+ *  РЅРµРґРѕРїСѓСЃС‚РёРјС‹С… СЃРёРјРІРѕР»РѕРІ - Р·Р°С‚РµРј РїСЂРµРѕР±СЂР°Р·СѓРµС‚ РІ set
  *
- * @tparam StringContainer Контейнер слов
- * @param strings Слова (вектор или set)
- * @return set слов
+ * @tparam StringContainer РљРѕРЅС‚РµР№РЅРµСЂ СЃР»РѕРІ
+ * @param strings РЎР»РѕРІР° (РІРµРєС‚РѕСЂ РёР»Рё set)
+ * @return set СЃР»РѕРІ
  */
 template<typename StringContainer>
 set<string> SearchServer::MakeUniqueNonEmptyStrings(
-        const StringContainer &strings) {
-    set<string> non_empty_strings;
-    for (const string &str : strings) {
-        if (!str.empty()) {
-            if (!IsValidWord(str)) {
-                throw invalid_argument("недопустимые символы !!!"s);
-            }
-            non_empty_strings.insert(str);
-        }
-    }
-    return non_empty_strings;
+		const StringContainer &strings) {
+	set<string> non_empty_strings;
+	for (const string &str : strings) {
+		if (!str.empty()) {
+			if (!IsValidWord(str)) {
+				throw invalid_argument("РЅРµРґРѕРїСѓСЃС‚РёРјС‹Рµ СЃРёРјРІРѕР»С‹ !!!"s);
+			}
+			non_empty_strings.insert(str);
+		}
+	}
+	return non_empty_strings;
 }

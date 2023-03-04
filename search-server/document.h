@@ -1,28 +1,28 @@
 #pragma once
 
 /**
- * @brief Результат поиска
+ * @brief Р РµР·СѓР»СЊС‚Р°С‚ РїРѕРёСЃРєР°
  *
  */
 struct Document {
-    Document() = default;
+	Document() = default;
 
-    Document(int id, double relevance, int rating) :
-            id(id), relevance(relevance), rating(rating) {
-    }
+	Document(int id, double relevance, int rating) :
+			id(id), relevance(relevance), rating(rating) {
+	}
 
-    int id = 0;
-    double relevance = 0.0;
-    int rating = 0;
+	int id = 0;
+	double relevance = 0.0;
+	int rating = 0;
 };
 
 /**
- * @brief Cтатус документа в поисковом сервере (класс перечисления)
+ * @brief CС‚Р°С‚СѓСЃ РґРѕРєСѓРјРµРЅС‚Р° РІ РїРѕРёСЃРєРѕРІРѕРј СЃРµСЂРІРµСЂРµ (РєР»Р°СЃСЃ РїРµСЂРµС‡РёСЃР»РµРЅРёСЏ)
  *
  */
 enum class DocumentStatus {
-    ACTUAL,      // действительные
-    IRRELEVANT,  // не подходящие
-    BANNED,      // запрещённые
-    REMOVED,     // удалённые
+	ACTUAL,      // РґРµР№СЃС‚РІРёС‚РµР»СЊРЅС‹Рµ
+	IRRELEVANT,  // РЅРµ РїРѕРґС…РѕРґСЏС‰РёРµ
+	BANNED,      // Р·Р°РїСЂРµС‰С‘РЅРЅС‹Рµ
+	REMOVED,     // СѓРґР°Р»С‘РЅРЅС‹Рµ
 };

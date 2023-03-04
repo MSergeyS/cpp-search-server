@@ -13,12 +13,12 @@ vector<string> SplitIntoWords(const string &text);
 ostream& operator<<(ostream &out, const Document &document);
 
 /**
- * @brief Îïåðàòîð âûâîäà äëÿ
+ * @brief ÐžÐ¿ÐµÑ€Ð°Ñ‚Ð¾Ñ€ Ð²Ñ‹Ð²Ð¾Ð´Ð° Ð´Ð»Ñ
  */
 template<typename Iterator>
 ostream& operator<<(ostream &out, const IteratorRange<Iterator> &range) {
-    for (Iterator it = range.begin(); it != range.end(); ++it) {
-        out << *it;
-    }
-    return out;
+	for (Iterator it = range.begin(); it != range.end(); ++it) {
+		out << *it;
+	}
+	return out;
 }
