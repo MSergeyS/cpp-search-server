@@ -51,7 +51,7 @@ void SearchServer::AddDocument(int document_id, const string &document,
 	}
 //        if (!IsValidWord(document)) {
 //            throw invalid_argument(
-//                    "invalid_argument("������������ �������!!!"s)"s);
+//                    "invalid_argument("недопустимые символы!!!"s)"s);
 //        }
 	const vector<string> words = SplitIntoWordsNoStop(document);
 	const double inv_word_count = 1.0 / words.size();
@@ -61,7 +61,7 @@ void SearchServer::AddDocument(int document_id, const string &document,
 	}
 	documents_.emplace(document_id,
 			DocumentData { ComputeAverageRating(ratings), status });
-	documents_ids_.push_back(document_id);
+	documents_ids_.emplace(document_id);
 }
 
 /**
@@ -76,18 +76,26 @@ void SearchServer::AddDocument(int document_id, const string &document,
  * @param document_id id документа
  */
 void SearchServer::RemoveDocument(int document_id) {
-	if (documents_.count(document_id)) {
-		documents_.erase(document_id);
-	}
+	// удаляем из documents_
+	documents_.erase(document_id);
+	// удаляем из documents_ids_
 	auto inx = find(documents_ids_.begin(), documents_ids_.end(), document_id);
 	if (inx != documents_ids_.end()) {
 		documents_ids_.erase(inx);
 	}
+
 	auto word_freq = GetWordFrequencies(document_id);
 	if (!word_freq.empty()) {
+		// удаляем из document_to_word_freqs_
 		document_to_word_freqs_.erase(document_id);
+		// удаляем из word_to_document_freqs_
 		for (auto [word, freq] : word_freq) {
 			word_to_document_freqs_.at(word).erase(document_id);
+			// если для слова в контейнере не осталось документов
+			if (word_to_document_freqs_.at(word).empty()) {
+				// слово удаляем из контейнера
+				word_to_document_freqs_.erase(word);
+			}
 		}
 	}
 }
@@ -192,7 +200,7 @@ tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(
  *
  * @return Возвращает возвращает итератор на первый элемент
  */
-vector<int>::iterator SearchServer::begin() {
+set<int>::iterator SearchServer::begin() {
 	return documents_ids_.begin();
 }
 
@@ -201,24 +209,9 @@ vector<int>::iterator SearchServer::begin() {
  *
  * @return Возвращает возвращает итератор на элемент, следующий за последним элементом
  */
-vector<int>::iterator SearchServer::end() {
+set<int>::iterator SearchServer::end() {
 	return documents_ids_.end();
 }
-
-/**
- * @brief Получает id документа по порядковому номеру в поисковом сервере
- *
- * @param index  Порядковый номер документа в поисковом сервере
- * @return id документа
- */
-int SearchServer::GetDocumentId(int index) const {
-	if ((index < 0) || (index > (GetDocumentCount() - 1))) {
-		throw out_of_range(
-				"id документа выходит за пределы допустимого диапазона!!!"s);
-	}
-	return documents_ids_[index];
-}
-
 
 bool SearchServer::IsValidWord(const string &word) {
 	// A valid word must not contain special characters

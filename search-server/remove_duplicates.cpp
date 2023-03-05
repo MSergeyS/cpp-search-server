@@ -22,26 +22,27 @@
  * @param search_server ссылка на поисковый сервер
  */
 void RemoveDuplicates(SearchServer &search_server) {
-	vector<int> duplicates_id;
-	map<set<string>, int> words_id;
+	vector<int> duplicates_id;  // id дубликатов, которые следует удалить
+	set<set<string>> set_words; // набор наборов слов документов
 	for (const int document_id : search_server) {
-		map<string, double> word_freq = search_server.GetWordFrequencies(
-				document_id);
+		// слова в документе document_id
+		map<string, double> word_freq = search_server.GetWordFrequencies(document_id);
+		// собираем эти слова в set
 		set<string> words;
 		for (const auto &pair : word_freq) {
 			words.insert(pair.first);
 		}
-		if (!words_id.empty()) {
-			if (words_id.count(words)) {
-				duplicates_id.push_back(document_id);
-			} else {
-				words_id[words] = document_id;
-			}
+
+		if (set_words.count(words)) {
+			// уже есть набор из таких слов
+			duplicates_id.push_back(document_id);
 		} else {
-			words_id[words] = document_id;
+			// добавляем набор в набор наборов)
+			set_words.emplace(words);
 		}
 	}
 
+	// удаляем дубликаты
 	for (const int id : duplicates_id) {
 		cout << "Found duplicate document id "s << id << endl;
 		search_server.RemoveDocument(id);

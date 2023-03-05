@@ -44,9 +44,9 @@ public:
 
 	int GetDocumentId(int index) const;
 
-	vector<int>::iterator begin();
+	set<int>::iterator begin();
 
-	vector<int>::iterator end();
+	set<int>::iterator end();
 
 	const map<string, double>& GetWordFrequencies(int document_id) const;
 
@@ -73,7 +73,7 @@ private:
 
 	// документы в поисковом сервере ({id документа, информация о документе (ср.рейтинг, статус)})
 	map<int, DocumentData> documents_;
-	vector<int> documents_ids_;
+	set<int> documents_ids_;
 	map<string, map<int, double>> word_to_document_freqs_;
 	map<int, map<string, double>> document_to_word_freqs_;
 
