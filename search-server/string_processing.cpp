@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 
+#include "string_processing.h"
+
 using namespace std;
 
 /**
@@ -10,23 +12,21 @@ using namespace std;
  * @param text Строка
  * @return Вектор слов
  */
-vector<string> SplitIntoWords(const string &text) {
-	vector<string> words;
-	string word;
-	for (const char c : text) {
-		if (c == ' ') {
-			if (!word.empty()) {
-				words.push_back(word);
-				word.clear();
-			}
-		} else if (c >= '\0' && c < ' ') {
-			throw invalid_argument("недопустимые символы !!!"s);
-		} else {
-			word += c;
-		}
-	}
-	if (!word.empty()) {
-		words.push_back(word);
-	}
-	return words;
+vector<string_view> SplitIntoWords(string_view text) {
+    vector<string_view> output;
+    size_t first = 0;
+
+    while (first < text.size()) {
+        const auto second = text.find_first_of(" ", first);
+
+        if (first != second)
+            output.emplace_back(text.substr(first, second - first));
+
+        if (second == string_view::npos)
+            break;
+
+        first = second + 1;
+    }
+
+    return output;
 }
